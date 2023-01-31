@@ -87,6 +87,7 @@ func (r *client) create() error {
 	var err error
 	r.conn, err = grpc.DialContext(timeoutCtx, r.cfg.Address, opts...)
 	if err != nil {
+		fmt.Printf("grpc client conn: %v\n", err.Error())
 		return err
 	}
 	r.client = fnservicepb.NewServiceFunctionClient(r.conn)
