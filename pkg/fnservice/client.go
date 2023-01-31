@@ -33,7 +33,13 @@ const (
 	maxMsgSize     = 512 * 1024 * 1024
 )
 
-func New(cfg *Config) (fnservicepb.ServiceFunctionClient, error) {
+type ServiceClient interface {
+	Create() (fnservicepb.ServiceFunctionClient, error)
+	Get() fnservicepb.ServiceFunctionClient
+	Close()
+}
+
+func New(cfg *Config) (ServiceClient, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("must provide non-nil Configw")
 	}
@@ -41,15 +47,26 @@ func New(cfg *Config) (fnservicepb.ServiceFunctionClient, error) {
 		cfg: cfg,
 	}
 
-	return c.create()
+	return c, nil
 }
 
 type client struct {
-	cfg  *Config
-	conn *grpc.ClientConn
+	cfg    *Config
+	conn   *grpc.ClientConn
+	client fnservicepb.ServiceFunctionClient
 }
 
-func (r *client) create() (fnservicepb.ServiceFunctionClient, error) {
+func (r *client) Close() {
+	if r.conn != nil {
+		r.conn.Close()
+	}
+}
+
+func (r *client) Get() fnservicepb.ServiceFunctionClient {
+	return r.client
+}
+
+func (r *client) Create() (fnservicepb.ServiceFunctionClient, error) {
 	if r.cfg == nil {
 		return nil, fmt.Errorf("must provide non-nil Configw")
 	}
