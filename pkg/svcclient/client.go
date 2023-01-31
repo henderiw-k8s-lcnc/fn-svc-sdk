@@ -34,7 +34,6 @@ const (
 )
 
 type ServiceClient interface {
-	Create() (fnservicepb.ServiceFunctionClient, error)
 	Get() fnservicepb.ServiceFunctionClient
 	Close()
 }
@@ -47,7 +46,7 @@ func New(cfg *Config) (ServiceClient, error) {
 		cfg: cfg,
 	}
 
-	return c, nil
+	return c, c.create()
 }
 
 type client struct {
@@ -66,9 +65,9 @@ func (r *client) Get() fnservicepb.ServiceFunctionClient {
 	return r.client
 }
 
-func (r *client) Create() (fnservicepb.ServiceFunctionClient, error) {
+func (r *client) create() error {
 	if r.cfg == nil {
-		return nil, fmt.Errorf("must provide non-nil Configw")
+		return fmt.Errorf("must provide non-nil Configw")
 	}
 	var opts []grpc.DialOption
 	fmt.Printf("grpc client config: %v\n", r.cfg)
@@ -78,7 +77,7 @@ func (r *client) Create() (fnservicepb.ServiceFunctionClient, error) {
 	} else {
 		tlsConfig, err := r.newTLS()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)))
 	}
@@ -88,10 +87,10 @@ func (r *client) Create() (fnservicepb.ServiceFunctionClient, error) {
 	var err error
 	r.conn, err = grpc.DialContext(timeoutCtx, r.cfg.Address, opts...)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	//defer conn.Close()
-	return fnservicepb.NewServiceFunctionClient(r.conn), nil
+	r.client = fnservicepb.NewServiceFunctionClient(r.conn)
+	return nil
 }
 
 func (r *client) newTLS() (*tls.Config, error) {
